@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Traductor de Voz en Tiempo Real",
+  "version": "1.0",
+  "description": "Traduce tu voz en tiempo real y la transmite a cualquier videollamada.",
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "https://api.mymemory.translated.net/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "translating.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://meet.google.com/*", "*://teams.microsoft.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["translating.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
