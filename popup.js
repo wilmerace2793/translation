@@ -55,22 +55,22 @@ if (!SpeechRecognition) {
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
     
-        // Obtener todas las voces disponibles
-        const voices = speechSynthesis.getVoices();
+        function setVoice() {
+            const voices = speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice => voice.name.includes("Microsoft Brian"));
     
-        // Seleccionar la voz específica si está disponible
-        const preferredVoice = voices.find(voice => voice.name === "Microsoft Brian Online (Natural) - English (United States)");
-    
-        if (preferredVoice) {
-            utterance.voice = preferredVoice;
-        } else {
-            const defaultVoice = voices.find(voice => voice.lang.startsWith(lang));
-            if (defaultVoice) {
-                utterance.voice = defaultVoice;
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
             }
+    
+            speechSynthesis.speak(utterance);
         }
     
-        speechSynthesis.speak(utterance);
+        if (speechSynthesis.getVoices().length > 0) {
+            setVoice();
+        } else {
+            speechSynthesis.onvoiceschanged = setVoice;
+        }
     }
 
     recognition.onresult = async (event) => {
