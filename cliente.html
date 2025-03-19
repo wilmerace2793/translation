@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Escuchar Audio en Vivo</title>
+</head>
+<body>
+  <h1>Escuchando el Audio en Vivo...</h1>
+  <audio id="player" controls autoplay></audio>
+
+  <script>
+    const ws = new WebSocket("ws://localhost:8080");
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+    ws.binaryType = "arraybuffer";
+  
+    ws.onmessage = async (event) => {
+      try {
+        console.log(event)
+        if (event.data.length === 0) {
+         console.warn("Se recibió un paquete vacío. Ignorando...");
+         return;
+        }
+        const audioBuffer = await audioContext.decodeAudioData(event.data);
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.start();
+      } catch (error) {
+        console.error("Error al decodificar el audio:", error);
+      }
+    };
+  
+    ws.onclose = () => console.log("Desconectado del servidor.");
+    ws.onerror = (err) => console.error("WebSocket Error:", err);
+  </script>
+</body>
+</html>
