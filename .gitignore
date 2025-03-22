@@ -1,0 +1,30 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Logs
+logs/
+*.log
+logs/*.log
+debug.log
+*.log.*
+
+# Directorios de compilación
+dist/
+build/
+.out/
+.cache/
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Directorios del editor
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
