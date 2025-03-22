@@ -2,37 +2,41 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Escuchar Audio en Vivo</title>
+  <title>Streaming de Audio</title>
 </head>
 <body>
-  <h1>Escuchando el Audio en Vivo...</h1>
+  <h1>Escuchando Audio...</h1>
   <audio id="player" controls autoplay></audio>
 
   <script>
-    const ws = new WebSocket("ws://localhost:8080");
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  
-    ws.binaryType = "arraybuffer";
-  
-    ws.onmessage = async (event) => {
-      try {
-        console.log(event)
-        if (event.data.length === 0) {
-         console.warn("Se recibió un paquete vacío. Ignorando...");
-         return;
-        }
-        const audioBuffer = await audioContext.decodeAudioData(event.data);
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioContext.destination);
-        source.start();
-      } catch (error) {
-        console.error("Error al decodificar el audio:", error);
-      }
-    };
-  
-    ws.onclose = () => console.log("Desconectado del servidor.");
-    ws.onerror = (err) => console.error("WebSocket Error:", err);
+    const audioPlayer = document.getElementById("player");
+    const audioUrl = "https://7vfx9wzs-8080.use2.devtunnels.ms/audio";
+
+    function startStream() {
+      console.log("Iniciando stream...");
+      audioPlayer.src = audioUrl + "?t=" + new Date().getTime(); // Evita caché
+      audioPlayer.play().catch(err => console.error("Error al iniciar audio:", err));
+    }
+
+    // Detectar si el audio deja de reproducirse
+    audioPlayer.addEventListener("stalled", () => {
+      console.warn("Stream detenido, reconectando...");
+      startStream();
+    });
+
+    audioPlayer.addEventListener("error", () => {
+      console.warn("Error en el audio, intentando reconectar...");
+      setTimeout(startStream, 100); // Reintentar en 3 segundos
+    });
+
+    // Forzar una reconexión cada 5 minutos para evitar el llenado de buffer
+    setInterval(() => {
+      console.log("Renovando conexión para evitar buffer lleno...");
+      audioPlayer.pause();
+      startStream();
+    }, 50 * 1000); // Cada 5 minutos
+
+    startStream();
   </script>
 </body>
 </html>

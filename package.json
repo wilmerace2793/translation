@@ -1,0 +1,28 @@
+{
+  "name": "translation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wilmerace2793/translation.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wilmerace2793/translation/issues"
+  },
+  "homepage": "https://github.com/wilmerace2793/translation#readme",
+  "dependencies": {
+    "binaryjs": "^0.2.1",
+    "child_process": "^1.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "fluent-ffmpeg": "^2.1.3",
+    "socket.io": "^4.8.1"
+  }
+}

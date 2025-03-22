@@ -68,8 +68,6 @@ if (!SpeechRecognition) {
     
         if (speechSynthesis.getVoices().length > 0) {
             setVoice();
-        } else {
-            speechSynthesis.onvoiceschanged = setVoice;
         }
     }
 
@@ -119,6 +117,7 @@ if (!SpeechRecognition) {
             isListening = true;
             recognition.start();
             document.getElementById("status").innerText = "Escuchando...";
+            
         }
     });
 }

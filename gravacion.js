@@ -1,58 +1,72 @@
-const WebSocket = require('ws');
-const { spawn } = require('child_process');
+const express = require("express");
+const { spawn } = require("child_process");
+const { PassThrough } = require("stream");
 
-// Configura WebSocket
-const wss = new WebSocket.Server({ port: 8080 }); // Cambia el puerto según sea necesario
-wss.on('connection', (ws) => {
-  console.log('Cliente conectado');
-  
-  // Configura la grabación de audio
-  const outputFile = "-";  // Usa "-" para que FFmpeg no guarde el archivo
-  const audioDevice = "Mezcla estéreo (Realtek High Definition Audio)"; // Usa el nombre exacto del dispositivo
-  
-  console.log("Iniciando grabación de audio del sistema...");
-  
-  const ffmpeg = spawn("ffmpeg", [
+const app = express();
+const PORT = 8080;
+const audioDevice = "Mezcla estéreo (Realtek High Definition Audio)";
+
+let ffmpeg;
+let clients = []; // Lista de clientes conectados
+const audioStream = new PassThrough({ highWaterMark: 1024 * 64 });
+
+function startFFmpeg() {
+  console.log("🔄 Iniciando FFmpeg...");
+
+  if (ffmpeg) ffmpeg.kill(); // Matar proceso anterior si existe
+
+  ffmpeg = spawn("ffmpeg", [
+    "-re",
     "-f", "dshow",
+    "-rtbufsize", "64k",
     "-i", `audio=${audioDevice}`,
     "-ac", "2",
     "-ar", "44100",
-    "-c:a", "pcm_s16le",
-    "-f", "wav",  // Especifica el formato WAV
-    "-flush_packets", "1",
-    "pipe:1"  // Usa la tubería para enviar el audio a stdout
+    "-c:a", "libmp3lame",
+    "-b:a", "128k",
+    "-f", "mp3",
+    "pipe:1"
   ]);
-  
-  // Maneja la salida del audio
-  ffmpeg.stdout.on("data", (data) => {
-    // Envía los datos de audio a través del WebSocket
-    console.log(`Datos de audio recibidos: ${data.length} bytes`);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(data);
-    }
-  });
-  
-  ffmpeg.stderr.on("data", (data) => {
-    
-    console.log(`stderr: ${data}`);
-  });
-  
-  ffmpeg.on("error", (err) => {
-    console.error(`Error al ejecutar FFmpeg: ${err.message}`);
-  });
-  
-  ffmpeg.on("close", (code) => {
-    console.log(`FFmpeg finalizó con código ${code}`);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.close(); // Cierra la conexión WebSocket cuando FFmpeg termina
-    }
-  });
 
-  ws.on("close", () => {
-    console.log("Cliente desconectado");
-    ffmpeg.kill("SIGINT"); // Detén FFmpeg cuando el cliente se desconecta
+  ffmpeg.stdout.pipe(audioStream); // Pasar los datos a nuestro stream
+
+  ffmpeg.stderr.on("data", (data) => {
+
+    console.error(`⚠️ FFmpeg: ${data}`);
+  });
+  
+
+  ffmpeg.on("close", () => {
+    console.warn("⚠️ FFmpeg se ha cerrado.");
+    if (clients.length > 0) {
+      console.log("🔄 Reiniciando FFmpeg en 3 segundos...");
+      setTimeout(startFFmpeg, 3000);
+    }
+  });
+}
+
+// Iniciar FFmpeg
+startFFmpeg();
+
+app.get("/audio", (req, res) => {
+  res.setHeader("Content-Type", "audio/mp3");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Expires", "0");
+  res.setHeader("Pragma", "no-cache");
+
+  console.log("✅ Cliente conectado.");
+
+  clients.push(res);
+  audioStream.pipe(res); // Enviar el stream de audio al cliente
+
+  req.on("close", () => {
+    console.log("❌ Cliente desconectado.");
+    clients = clients.filter(client => client !== res);
+    res.end();
   });
 });
 
-console.log("Servidor WebSocket escuchando en ws://localhost:8080");
-
+app.listen(PORT, () => {
+  console.log(`🎵 Streaming disponible en: http://localhost:${PORT}/audio`);
+});
