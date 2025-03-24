@@ -1,6 +1,7 @@
 const express = require("express");
 const { spawn } = require("child_process");
 const { PassThrough } = require("stream");
+const WebSocket = require("ws");
 
 const app = express();
 const PORT = 8080;
@@ -27,7 +28,7 @@ function startFFmpeg() {
     "-c:a", "libmp3lame",
     "-b:a", "128k",
     "-f", "mp3",
-    "pipe:1"
+    "pipe:1",
   ]);
 
   let lastDataTime = Date.now();
@@ -59,14 +60,14 @@ function startFFmpeg() {
 startFFmpeg();
 
 app.get("/audio", (req, res) => {
-  res.setHeader("Content-Type", "audio/mpeg"); // Asegurar compatibilidad con todos los navegadores
-  res.setHeader("Connection", "keep-alive"); // Mantener la conexión abierta
+  res.setHeader("Content-Type", "audio/mpeg");
+  res.setHeader("Connection", "keep-alive");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
-  res.setHeader("Transfer-Encoding", "chunked"); // Streaming continuo
-  res.setHeader("X-Content-Type-Options", "nosniff"); // Evitar que los navegadores bloqueen el stream
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Permitir que cualquier dominio acceda al stream
+  res.setHeader("Transfer-Encoding", "chunked");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -77,11 +78,61 @@ app.get("/audio", (req, res) => {
 
   req.on("close", () => {
     console.log("❌ Cliente desconectado.");
-    clients = clients.filter(client => client !== res);
+    clients = clients.filter((client) => client !== res);
     res.end();
   });
 });
 
+const wss = new WebSocket.Server({ port: 8081 });
+const audioBuffer = []; // Acumulador de audio
+
+/*wss.on("connection", (ws) => {
+  console.log("✅ Cliente WebSocket conectado");
+
+  let processing = false;
+
+  audioStream.on("data", (chunk) => {
+    audioBuffer.push(chunk);
+    console.log("Buffer length:", audioBuffer.length);
+
+    if (!processing && audioBuffer.length >= 30) {
+      processing = true; // Bloquear nuevos procesos hasta que termine el actual
+
+      const fullAudio = Buffer.concat(audioBuffer);
+      audioBuffer.length = 0; // Limpiar buffer después de concatenar
+
+      const pythonProcess = spawn("python", ["transcribe.py"], {
+        stdio: ["pipe", "pipe", "inherit"],
+      });
+
+      pythonProcess.stdin.write(fullAudio);
+      pythonProcess.stdin.end();
+
+      pythonProcess.stdout.on("data", (data) => {
+        const text = data.toString().trim();
+        if (text && ws.readyState === ws.OPEN) {
+          ws.send(text);
+        }
+      });
+
+      pythonProcess.on("exit", () => {
+        processing = false; // Solo cuando termine el proceso, permitimos otro
+      });
+
+      pythonProcess.on("error", (err) => {
+        console.error("Error en proceso Python:", err);
+        processing = false;
+      });
+    }
+  });
+
+  ws.on("close", () => {
+    console.log("❌ Cliente WebSocket desconectado");
+  });
+});*/
+
+
 app.listen(PORT, () => {
   console.log(`🎵 Streaming disponible en: http://localhost:${PORT}/audio`);
+  console.log(`🎙️ Transcripción disponible en: ws://localhost:8081`);
 });
